@@ -14,7 +14,9 @@ class Member:
         self.id_proof = id_proof
         self.referrer = referrer
         self.downline = []
-
+        
+if referrer:
+referrer.downline.append(self)
         id_proof_counts[id_proof] = id_proof_counts.get(id_proof, 0) + 1
 
     def display_info(self):
