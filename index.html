@@ -3,87 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <title>MLM సిస్టమ్</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-section, .member-card { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 5px; 
+            background-color: #f9f9f9;
+        }
+        .member-card { display: flex; align-items: center; }
+        .avatar { font-size: 40px; margin-right: 15px; color: #555; }
+        .member-details { flex-grow: 1; }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .left-badge { background-color: #007bff; }
+        .right-badge { background-color: #28a745; }
+    </style>
 </head>
 <body>
-    <h2>సభ్యుల రిజిస్ట్రేషన్</h2>
-    <form id="memberForm">
-        పేరు: <input type="text" id="name" required><br><br>
-        ఐడీ నెంబర్: <input type="number" id="id_number" required><br><br>
-        ఐడీ ప్రూఫ్: <input type="text" id="id_proof" required><br><br>
-        రిఫరర్ ఐడీ: <input type="text" id="referrer_id" required><br><br>
-        పొజిషన్: 
-        <select id="position" required>
-            <option value="Left">లెఫ్ట్</option>
-            <option value="Right">రైట్</option>
-        </select><br><br>
-        <button type="submit">జాయిన్ చేయండి</button>
-    </form>
+
+    <h2>సభ్యుల రిజిస్ట్రేషన్ (MLM సిస్టమ్)</h2>
+
+    <!-- మొదటి స్క్రీన్: KYC ఆప్షన్ -->
+    <div class="form-section">
+        <h3>KYC వెరిఫికేషన్</h3>
+        <form id="kycForm">
+            ఫోటో అప్‌లోడ్ చేయండి (ఆధార్/పాన్): <input type="file" id="photoInput" accept="image/*" required><br><br>
+            <button type="submit">ఫోటో అప్‌లోడ్</button>
+        </form>
+    </div>
+
+    <!-- సభ్యుల రిజిస్ట్రేషన్ ఫారమ్ -->
+    <div id="registrationSection" class="form-section" style="display:none;">
+        <h3>సభ్యుల వివరాలు</h3>
+        <form id="memberForm">
+            పేరు: <input type="text" id="name" required><br><br>
+            రిఫరర్ ఐడీ: <input type="text" id="referrer_id" required><br><br>
+            పొజిషన్: 
+            <select id="position" required>
+                <option value="Left">లెఫ్ట్ (Left)</option>
+                <option value="Right">రైట్ (Right)</option>
+            </select><br><br>
+            <button type="submit">జాయిన్ చేయండి</button>
+        </form>
+    </div>
     
-    <h3>సభ్యుల సమాచారం:</h3>
+    <h3>నెట్‌వర్క్ సభ్యుల సమాచారం:</h3>
     <div id="output"></div>
 
     <script>
-        const idProofCounts = {};
+        const photoHashes = {};
         let members = [];
         let editIndex = -1;
+        let nextIdCounter = 1001; 
+        let currentPhotoHash = "";
+
+        // ఫైల్ కంటెంట్ ని బట్టి ప్రత్యేకమైన హాష్ తయారు చేసే ఫంక్షన్
+        async function getFileHash(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        // మొదటి స్క్రీన్: ఫోటో అప్‌లోడ్ మరియు చెకింగ్
+        document.getElementById('kycForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('photoInput');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            currentPhotoHash = await getFileHash(file);
+
+            if ((photoHashes[currentPhotoHash] || 0) >= 3) {
+                alert("ఈ ఫోటోతో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి. దీనిని మళ్ళీ ఉపయోగించలేరు.");
+                return;
+            }
+
+            alert("ఫోటో విజయవంతంగా అప్‌లోడ్ అయింది! ఇప్పుడు మీరు మిగతా వివరాలు నింపవచ్చు.");
+            document.getElementById('registrationSection').style.display = 'block';
+        });
 
         document.getElementById('memberForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const name = document.getElementById('name').value;
-            const idNumber = document.getElementById('id_number').value;
-            const idProof = document.getElementById('id_proof').value;
             const referrerId = document.getElementById('referrer_id').value;
             const position = document.getElementById('position').value;
 
             if (editIndex === -1) {
-                // New member
-                if ((idProofCounts[idProof] || 0) >= 3) {
-                    alert("ఈ ఐడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
-                    return;
-                }
-                idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
-                members.push({ name: name, id: idNumber, proof: idProof, referrer: referrerId, position: position });
+                // కొత్త సభ్యుల రిజిస్ట్రేషన్
+                photoHashes[currentPhotoHash] = (photoHashes[currentPhotoHash] || 0) + 1;
+                
+                const uniqueId = "MLM-" + nextIdCounter++; 
+
+                members.push({ 
+                    name: name, 
+                    id: uniqueId, 
+                    referrer: referrerId, 
+                    position: position,
+                    photoHash: currentPhotoHash
+                });
             } else {
-                // Editing existing member
-                const oldProof = members[editIndex].proof;
-                if (idProof !== oldProof) {
-                    if ((idProofCounts[idProof] || 0) >= 3) {
-                        alert("ఈ ఐడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
-                        return;
-                    }
-                    if (oldProof in idProofCounts) idProofCounts[oldProof]--;
-                    idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
-                }
-                members[editIndex] = { name: name, id: idNumber, proof: idProof, referrer: referrerId, position: position };
+                // ఎడిట్ లాజిక్ ఇక్కడ వస్తుంది...
                 editIndex = -1;
                 document.querySelector('button[type="submit"]').textContent = "జాయిన్ చేయండి";
             }
 
             document.getElementById('memberForm').reset();
+            document.getElementById('kycForm').reset();
+            document.getElementById('registrationSection').style.display = 'none';
+            currentPhotoHash = "";
             updateOutput();
         });
 
         function updateOutput() {
             let html = "";
             members.forEach((m, index) => {
-                html += `<p>పేరు: ${m.name}, ID: ${m.id}, ప్రూఫ్: ${m.proof}, రిఫరర్: ${m.referrer}, పొజిషన్: ${m.position} <button onclick="editMember(${index})">ఎడిట్</button></p>`;
+                const badgeClass = m.position === 'Left' ? 'left-badge' : 'right-badge';
+                html += `
+                    <div class="member-card">
+                        <div class="avatar">👤</div>
+                        <div class="member-details">
+                            <strong>పేరు:</strong> ${m.name} | 
+                            <strong>ప్రత్యేక ఐడీ (UID):</strong> <span style="color:blue;">${m.id}</span> <br>
+                            <strong>రిఫరర్ ఐడీ:</strong> ${m.referrer} | 
+                            <strong>పొజిషన్:</strong> <span class="badge ${badgeClass}">${m.position}</span>
+                        </div>
+                    </div>
+                `;
             });
             document.getElementById('output').innerHTML = html;
-        }
-
-        function editMember(index) {
-            const member = members[index];
-            document.getElementById('name').value = member.name;
-            document.getElementById('id_number').value = member.id;
-            document.getElementById('id_proof').value = member.proof;
-            document.getElementById('referrer_id').value = member.referrer;
-            document.getElementById('position').value = member.position;
-            editIndex = index;
-            document.querySelector('button[type="submit"]').textContent = "అప్‌డేట్ చేయండి";
         }
     </script>
 </body>
 </html>
-
-```
