@@ -1,1 +1,52 @@
-Hello,welcome to my website!
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>MLM సిస్టమ్</title>
+</head>
+<body>
+    <h2>సభ్యుల రిజిస్ట్రేషన్</h2>
+    <form id="memberForm">
+        పేరు: <input type="text" id="name" required><br><br>
+        ఐడీ నెంబర్: <input type="number" id="id_number" required><br><br>
+        ఐడీ ప్రూఫ్: <input type="text" id="id_proof" required><br><br>
+        <button type="submit">జాయిన్ చేయండి</button>
+    </form>
+    
+    <h3>సభ్యుల సమాచారం:</h3>
+    <div id="output"></div>
+
+    <script>
+        const idProofCounts = {};
+        const members = [];
+
+        document.getElementById('memberForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const idNumber = document.getElementById('id_number').value;
+            const idProof = document.getElementById('id_proof').value;
+
+            if ((idProofCounts[idProof] || 0) >= 3) {
+                alert("ఈ ఐడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
+                return;
+            }
+
+            idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
+
+            members.push({ name: name, id: idNumber, proof: idProof });
+
+            updateOutput();
+        });
+
+        function updateOutput() {
+            let html = "";
+            members.forEach(m => {
+                html += `<p>పేరు: ${m.name}, ID: ${m.id}, ప్రూఫ్: ${m.proof}</p>`;
+            });
+            document.getElementById('output').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
