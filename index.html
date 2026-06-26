@@ -10,6 +10,12 @@
         పేరు: <input type="text" id="name" required><br><br>
         ఐడీ నెంబర్: <input type="number" id="id_number" required><br><br>
         ఐడీ ప్రూఫ్: <input type="text" id="id_proof" required><br><br>
+        రిఫరర్ ఐడీ: <input type="text" id="referrer_id" required><br><br>
+        పొజిషన్: 
+        <select id="position" required>
+            <option value="Left">లెఫ్ట్</option>
+            <option value="Right">రైట్</option>
+        </select><br><br>
         <button type="submit">జాయిన్ చేయండి</button>
     </form>
     
@@ -27,6 +33,8 @@
             const name = document.getElementById('name').value;
             const idNumber = document.getElementById('id_number').value;
             const idProof = document.getElementById('id_proof').value;
+            const referrerId = document.getElementById('referrer_id').value;
+            const position = document.getElementById('position').value;
 
             if (editIndex === -1) {
                 // New member
@@ -35,19 +43,19 @@
                     return;
                 }
                 idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
-                members.push({ name: name, id: idNumber, proof: idProof });
+                members.push({ name: name, id: idNumber, proof: idProof, referrer: referrerId, position: position });
             } else {
                 // Editing existing member
                 const oldProof = members[editIndex].proof;
                 if (idProof !== oldProof) {
                     if ((idProofCounts[idProof] || 0) >= 3) {
-                        alert("ఈ आईడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
+                        alert("ఈ ఐడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
                         return;
                     }
                     if (oldProof in idProofCounts) idProofCounts[oldProof]--;
                     idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
                 }
-                members[editIndex] = { name: name, id: idNumber, proof: idProof };
+                members[editIndex] = { name: name, id: idNumber, proof: idProof, referrer: referrerId, position: position };
                 editIndex = -1;
                 document.querySelector('button[type="submit"]').textContent = "జాయిన్ చేయండి";
             }
@@ -59,7 +67,7 @@
         function updateOutput() {
             let html = "";
             members.forEach((m, index) => {
-                html += `<p>పేరు: ${m.name}, ID: ${m.id}, ప్రూఫ్: ${m.proof} <button onclick="editMember(${index})">ఎడిట్</button></p>`;
+                html += `<p>పేరు: ${m.name}, ID: ${m.id}, ప్రూఫ్: ${m.proof}, రిఫరర్: ${m.referrer}, పొజిషన్: ${m.position} <button onclick="editMember(${index})">ఎడిట్</button></p>`;
             });
             document.getElementById('output').innerHTML = html;
         }
@@ -69,9 +77,13 @@
             document.getElementById('name').value = member.name;
             document.getElementById('id_number').value = member.id;
             document.getElementById('id_proof').value = member.proof;
+            document.getElementById('referrer_id').value = member.referrer;
+            document.getElementById('position').value = member.position;
             editIndex = index;
             document.querySelector('button[type="submit"]').textContent = "అప్‌డేట్ చేయండి";
         }
     </script>
 </body>
 </html>
+
+```
