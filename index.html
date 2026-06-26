@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="te">
 <head>
@@ -18,7 +19,8 @@
 
     <script>
         const idProofCounts = {};
-        const members = [];
+        let members = [];
+        let editIndex = -1;
 
         document.getElementById('memberForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -27,26 +29,50 @@
             const idNumber = document.getElementById('id_number').value;
             const idProof = document.getElementById('id_proof').value;
 
-            if ((idProofCounts[idProof] || 0) >= 3) {
-                alert("ఈ ఐడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
-                return;
+            if (editIndex === -1) {
+                // New member
+                if ((idProofCounts[idProof] || 0) >= 3) {
+                    alert("ఈ ఐడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
+                    return;
+                }
+                idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
+                members.push({ name: name, id: idNumber, proof: idProof });
+            } else {
+                // Editing existing member
+                const oldProof = members[editIndex].proof;
+                if (idProof !== oldProof) {
+                    if ((idProofCounts[idProof] || 0) >= 3) {
+                        alert("ఈ आईడీ ప్రూఫ్‌తో ఇప్పటికే మూడు ఐడీలు రిజిస్టర్ అయ్యాయి.");
+                        return;
+                    }
+                    if (oldProof in idProofCounts) idProofCounts[oldProof]--;
+                    idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
+                }
+                members[editIndex] = { name: name, id: idNumber, proof: idProof };
+                editIndex = -1;
+                document.querySelector('button[type="submit"]').textContent = "జాయిన్ చేయండి";
             }
 
-            idProofCounts[idProof] = (idProofCounts[idProof] || 0) + 1;
-
-            members.push({ name: name, id: idNumber, proof: idProof });
-
+            document.getElementById('memberForm').reset();
             updateOutput();
         });
 
         function updateOutput() {
             let html = "";
-            members.forEach(m => {
-                html += `<p>పేరు: ${m.name}, ID: ${m.id}, ప్రూఫ్: ${m.proof}</p>`;
+            members.forEach((m, index) => {
+                html += `<p>పేరు: ${m.name}, ID: ${m.id}, ప్రూఫ్: ${m.proof} <button onclick="editMember(${index})">ఎడిట్</button></p>`;
             });
             document.getElementById('output').innerHTML = html;
+        }
+
+        function editMember(index) {
+            const member = members[index];
+            document.getElementById('name').value = member.name;
+            document.getElementById('id_number').value = member.id;
+            document.getElementById('id_proof').value = member.proof;
+            editIndex = index;
+            document.querySelector('button[type="submit"]').textContent = "అప్‌డేట్ చేయండి";
         }
     </script>
 </body>
 </html>
-
