@@ -4,12 +4,14 @@ let editIndex = -1;
 let nextIdCounter = parseInt(localStorage.getItem('wlmNextIdCounter')) || 1001;
 let currentPhotoHash = "";
 
+// లోకల్ స్టోరేజ్‌లో డేటాను దాచడానికి
 function saveToStorage() {
     localStorage.setItem('wlmMembers', JSON.stringify(members));
     localStorage.setItem('wlmPhotoHashes', JSON.stringify(photoHashes));
     localStorage.setItem('wlmNextIdCounter', nextIdCounter);
 }
 
+// ఫోటో యొక్క SHA-256 హాష్ విలువను లెక్కించడానికి
 async function getFileHash(file) {
     const arrayBuffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
@@ -17,6 +19,7 @@ async function getFileHash(file) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// KYC ఫారమ్ సబ్మిట్ చేసినప్పుడు
 document.getElementById('kycForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const fileInput = document.getElementById('photoInput');
@@ -24,19 +27,24 @@ document.getElementById('kycForm').addEventListener('submit', async function(e) 
     if (!file) return;
 
     currentPhotoHash = await getFileHash(file);
-    if (photoHashes[currentPhotoHash] !== undefined) {
-        alert("ఈ ఫోటోతో ఇప్పటికే ముగ్గురు రిజిస్టర్ అయ్యారు. దీన్ని మళ్లీ ఉపయోగించవద్దు.");
+    
+    // ఒకే ఫోటో 3 కంటే ఎక్కువ సార్లు వాడితే నిరోధించే కండిషన్ (సరిచేయబడింది)
+    if (photoHashes[currentPhotoHash] && photoHashes[currentPhotoHash] >= 3) {
+        alert("ఈ ఫోటోతో ఇప్పటికే 3 రిజిస్ట్రేషన్లు పూర్తయ్యాయి. దయచేసి వేరే ఫోటో ఉపయోగించండి.");
+        currentPhotoHash = ""; // హాష్ రీసెట్
         return;
     }
+    
     alert("ఫోటో విజయవంతంగా అప్‌లోడ్ అయింది! ఇప్పుడు మీరు రిజిస్ట్రేషన్ పూర్తి చేయవచ్చు.");
 });
 
+// స్క్రీన్‌పై మెంబర్ల లిస్ట్ చూపించడానికి
 function updateOutput() {
     const outputDiv = document.getElementById('output');
     outputDiv.innerHTML = '';
     members.forEach((m, index) => {
         outputDiv.innerHTML += `
-            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 5px; background: #f9f9f9;">
                 <p><strong>పేరు:</strong> ${m.name}</p>
                 <p><strong>ప్రత్యేక ఐడి (UID):</strong> ${m.id}</p>
                 <p><strong>రిఫరర్ ఐడి:</strong> ${m.referrer}</p>
@@ -47,16 +55,20 @@ function updateOutput() {
     });
 }
 
-function editMember(index) {
+// ఎడిట్ బటన్ నొక్కినప్పుడు వివరాలు ఫారమ్‌లోకి రావడానికి
+window.editMember = function(index) { // గ్లోబల్ విండో స్కోప్‌కు యాడ్ చేయబడింది
     editIndex = index;
     const member = members[index];
     document.getElementById('name').value = member.name;
     document.getElementById('referrer_id').value = member.referrer;
     document.getElementById('position').value = member.position;
-    document.querySelector('button[type="submit"]').textContent = 'అప్‌డేట్ చేయండి';
-    document.getElementById('registrationSection').style.display = 'block';
-}
+    document.querySelector('#memberForm button[type="submit"]').textContent = 'అప్‌డేట్ చేయండి';
+    
+    const regSection = document.getElementById('registrationSection');
+    if (regSection) regSection.style.display = 'block';
+};
 
+// మెంబర్ ఫారమ్ సబ్మిట్ చేసినప్పుడు
 document.getElementById('memberForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const name = document.getElementById('name').value;
@@ -64,10 +76,12 @@ document.getElementById('memberForm').addEventListener('submit', function(e) {
     const position = document.getElementById('position').value;
 
     if (editIndex === -1) {
+        // కొత్త మెంబర్ రిజిస్ట్రేషన్
         if (!currentPhotoHash) {
-            alert("దయచేసి ముందుగా KYC పూర్తి చేయండి.");
+            alert("దయచేసి ముందుగా KYC పూర్తి చేయండి (ఫోటో అప్‌లోడ్ చేయండి).");
             return;
         }
+        
         if (!photoHashes[currentPhotoHash]) {
             photoHashes[currentPhotoHash] = 0;
         }
@@ -82,18 +96,36 @@ document.getElementById('memberForm').addEventListener('submit', function(e) {
             photoHash: currentPhotoHash
         });
     } else {
+        // పాత మెంబర్ వివరాల అప్‌డేట్
+        // ఒకవేళ ఎడిట్ చేసేటప్పుడు కొత్త ఫోటో అప్‌లోడ్ చేస్తే హాష్ కౌంట్ మారుస్తాం
+        if (currentPhotoHash && currentPhotoHash !== members[editIndex].photoHash) {
+            // పాత ఫోటో కౌంట్ తగ్గించడం
+            const oldHash = members[editIndex].photoHash;
+            if (photoHashes[oldHash]) photoHashes[oldHash]--;
+            
+            // కొత్త ఫోటో కౌంట్ పెంచడం
+            if (!photoHashes[currentPhotoHash]) photoHashes[currentPhotoHash] = 0;
+            photoHashes[currentPhotoHash]++;
+            members[editIndex].photoHash = currentPhotoHash;
+        }
+
         members[editIndex].name = name;
         members[editIndex].referrer = referrerId;
         members[editIndex].position = position;
+        
         editIndex = -1;
-        document.querySelector('button[type="submit"]').textContent = 'జాయిన్ చేయండి';
+        document.querySelector('#memberForm button[type="submit"]').textContent = 'జాయిన్ చేయండి';
     }
 
     saveToStorage();
     updateOutput();
     document.getElementById('memberForm').reset();
-    document.getElementById('registrationSection').style.display = 'none';
-    currentPhotoHash = ""; // Reset for next registration
+    
+    const regSection = document.getElementById('registrationSection');
+    if (regSection) regSection.style.display = 'none';
+    
+    currentPhotoHash = ""; // తదుపరి రిజిస్ట్రేషన్ కోసం రీసెట్
 });
 
+// పేజీ లోడ్ అయినప్పుడు రన్ అవుతుంది
 updateOutput();
