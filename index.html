@@ -1,6 +1,7 @@
 ​<!DOCTYPE html>
 ​<html>
-​<head>
+​<head>   
+    <script>
 let members = JSON.parse(localStorage.getItem('wlmMembers')) || [];
 const photoHashes = JSON.parse(localStorage.getItem('wlmPhotoHashes')) || {};
 let editIndex = -1;
@@ -129,7 +130,7 @@ document.getElementById('memberForm').addEventListener('submit', function(e) {
     
     currentPhotoHash = ""; // తదుపరి రిజిస్ట్రేషన్ కోసం రీసెట్
 });
-
+</script>
 // పేజీ లోడ్ అయినప్పుడు రన్ అవుతుంది
 updateOutput();
 </body>
